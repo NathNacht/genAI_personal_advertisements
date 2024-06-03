@@ -1,18 +1,13 @@
-# utils/dummy_data.py
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 import os
 from faker import Faker
-import utils.schema as schema
+import schema as schema
 
 # Load environment variables
 load_dotenv()
 
-# Ensure the utils directory exists
-os.makedirs("utils", exist_ok=True)
-
-# Set DATABASE_URL to save the database in the utils folder
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./utils/test.db')
 
 Base = schema.Base
@@ -22,10 +17,32 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Create the tables
 Base.metadata.create_all(bind=engine)
 
+def determine_persona(age, children):
+    if age >= 60:
+        return "seniors"
+    elif age < 40 and not children:
+        return "young adults"
+    elif children and age <= 40:
+        return "young family"
+    elif children and age > 40:
+        return "teenage family"
+    else:
+        return "other"  # This is a fallback for any edge cases
+
 # Function to generate fake data
 def create_fake_data():
     db = SessionLocal()
     fake = Faker()
+
+    # Clear existing data
+    db.query(schema.Customer).delete()
+    db.query(schema.Subscription).delete()
+    db.query(schema.Promotion).delete()
+    db.query(schema.Channel).delete()
+    db.query(schema.Persona).delete()
+    db.query(schema.Advertisement).delete()
+    db.query(schema.Outcome).delete()
+    db.commit()
 
     # Create subscriptions
     subscriptions = [
@@ -48,20 +65,52 @@ def create_fake_data():
     for promo in promotions:
         db.add(schema.Promotion(details=promo["details"], validity_period=promo["validity_period"]))
 
+    # Create channels
+    channels = [
+        {"channel": "Web"},
+        {"channel": "Email"},
+        {"channel": "Social Media"},
+        {"channel": "Magazine"},
+        {"channel": "Billboard"}
+    ]
+    for ch in channels:
+        db.add(schema.Channel(channel=ch["channel"]))
+
+    # Create personas
+    personas = [
+        {"description": "young adults"},
+        {"description": "young family"},
+        {"description": "teenage family"},
+        {"description": "seniors"},
+        {"description": "other"}
+    ]
+    for persona in personas:
+        db.add(schema.Persona(description=persona["description"]))
+
     db.commit()
     
+    # Get persona IDs
+    persona_dict = {persona.description: persona.id for persona in db.query(schema.Persona).all()}
+
     # Create customers
-    subscription_ids = db.query(schema.Subscription.id).all()
+    subscription_ids = [sub.id for sub in db.query(schema.Subscription.id).all()]
     for _ in range(100):
+        age = fake.random_int(min=18, max=80)
+        married = fake.boolean()
+        children = fake.boolean()
+        persona_desc = determine_persona(age, children)
+        persona_id = persona_dict.get(persona_desc, persona_dict["other"])
+        
         customer = schema.Customer(
             name=fake.name(),
-            age=fake.random_int(min=18, max=80),
+            age=age,
             city=fake.city(),
             country=fake.country(),
-            married=fake.boolean(),
-            children=fake.random_int(min=0, max=5),
+            married=married,
+            children=children,
             pets=fake.random_int(min=0, max=3),
-            subscription_id=fake.random_element(elements=subscription_ids)[0]
+            subscription_id=fake.random_element(elements=subscription_ids),
+            persona_id=persona_id
         )
         db.add(customer)
     
@@ -69,4 +118,6 @@ def create_fake_data():
     db.close()
 
 if __name__ == "__main__":
+    print("Creating fake data...")
     create_fake_data()
+    print("Fake data created successfully.")
