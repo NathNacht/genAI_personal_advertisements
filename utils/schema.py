@@ -1,26 +1,21 @@
-# database.py
+# utils/schema.py
+
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Text, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
-import os
-
-# Load environment variables
-load_dotenv()
-
-DATABASE_URL = os.getenv('DATABASE_URL')
 
 Base = declarative_base()
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Define your models here
 class Customer(Base):
     __tablename__ = 'customers'
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    email = Column(String, unique=True, index=True)
-    demographic_info = Column(String)
+    age = Column(Integer)
+    city = Column(String)
+    country = Column(String)
+    married = Column(Boolean)
+    children = Column(Integer)
+    pets = Column(Integer)
     subscription_id = Column(Integer, ForeignKey('subscriptions.id'))
 
 class Subscription(Base):
@@ -54,6 +49,3 @@ class Outcome(Base):
     customer_id = Column(Integer, ForeignKey('customers.id'))
     timestamp = Column(String)
     action = Column(String)
-
-# Create the tables
-Base.metadata.create_all(bind=engine)
