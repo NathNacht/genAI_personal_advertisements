@@ -23,20 +23,22 @@ The database consists of several tables: `Customer`, `Subscription`, `Promotion`
 ### Entity-Relationship Diagram (ERD)
 
 ```plaintext
-Customer       Subscription       Promotion       Advertisement       Outcome
---------       ------------       ---------       --------------      -------
-| id      |    | id          |    | id      |     | id            |   | id        |
-| name    |    | plan_name   |    | details |     | customer_id   |   | ad_id     |
-| email   |    | features    |    | validity|     | promotion_id  |   | customer_id|
-| demographic_info           |    | period  |     | subscription_id|   | timestamp |
-| subscription_id            |                |     | generated_prompt|   | action    |
-                            |                |     | generated_image |  |           |
-                            |                |     | generated_text  |  |           |
-                            |                |     | outcome         |  |           |
-
+Customer         Subscription       Promotion         Advertisement        Outcome
+---------------  ----------------  ---------------    ------------------  --------------
+| id           | | id            | | id           |   | id              | | id          |
+| name         | | plan_name     | | details      |   | customer_id     | | ad_id       |
+| email        | | features      | | validity     |   | promotion_id    | | customer_id |
+| demographic_ | | price         | | period       |   | subscription_id | | timestamp   |
+| info         | |               | |              |   | generated_      | | action      |
+| subscription | |               | |              |   | prompt          | |             |
+| _id          | |               | |              |   | generated_      | |             |
+|              | |               | |              |   | image_path      | |             |
+|              | |               | |              |   | generated_text  | |             |
+|              | |               | |              |   | outcome         | |             |
+```
 
 ### Flow Overview
-
+```
 +-------------------+          +---------------------+          +--------------------+
 |                   |          |                     |          |                    |
 |    Customer       |          |    FastAPI          |          |  Generative AI     |
@@ -70,6 +72,7 @@ Customer       Subscription       Promotion       Advertisement       Outcome
 |      Outcome      <----------+  Accept/Decline +<---------+  Feedback Loop   |
 |                   |          |                 |          |                  |
 +-------------------+          +-----------------+          +------------------+
+```
 
 ## 🎮 Setup Instructions
 
