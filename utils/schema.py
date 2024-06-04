@@ -1,5 +1,8 @@
+# utils/schema.py
+
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Text, Boolean
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 Base = declarative_base()
 
@@ -14,7 +17,6 @@ class Customer(Base):
     children = Column(Integer)
     pets = Column(Integer)
     subscription_id = Column(Integer, ForeignKey('subscriptions.id'))
-    persona_id = Column(Integer, ForeignKey('personas.id'))
 
 class Subscription(Base):
     __tablename__ = 'subscriptions'
@@ -29,23 +31,12 @@ class Promotion(Base):
     details = Column(String)
     validity_period = Column(String)
 
-class Channel(Base):
-    __tablename__ = 'channels'
-    id = Column(Integer, primary_key=True, index=True)
-    channel = Column(String)
-
-class Persona(Base):
-    __tablename__ = 'personas'
-    id = Column(Integer, primary_key=True, index=True)
-    description = Column(String, unique=True)
-
 class Advertisement(Base):
     __tablename__ = 'advertisements'
     id = Column(Integer, primary_key=True, index=True)
     customer_id = Column(Integer, ForeignKey('customers.id'))
     promotion_id = Column(Integer, ForeignKey('promotions.id'))
     subscription_id = Column(Integer, ForeignKey('subscriptions.id'))
-    channel_id = Column(Integer, ForeignKey('channels.id'))
     generated_prompt = Column(Text)
     generated_image_path = Column(String)
     generated_text = Column(Text)
