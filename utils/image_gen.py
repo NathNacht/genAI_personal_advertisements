@@ -3,7 +3,7 @@ import io
 from PIL import Image
 
 API_URL = "https://api-inference.huggingface.co/models/SG161222/RealVisXL_V4.0"
-headers = {"Authorization": "Bearer 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"}
+headers = {"Authorization": "Bearer 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"}
 
 def query(payload):
     response = requests.post(API_URL, headers=headers, json=payload)
