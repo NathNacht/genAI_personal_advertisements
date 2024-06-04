@@ -1,5 +1,6 @@
+# main.py
 import logging
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from utils import SessionLocal, engine, Customer, Subscription, Promotion, Advertisement, Outcome, generate_prompt, generate_image, Base
 from dotenv import load_dotenv
@@ -33,14 +34,22 @@ def get_promotions(db: Session = Depends(get_db)):
     return promotions
 
 @app.get("/advertisement/{customer_id}")
-def get_advertisement(customer_id: int, db: Session = Depends(get_db)):
+def get_advertisement(customer_id: int, promotion_id: int, db: Session = Depends(get_db)):
+    logging.info(f"Fetching customer with ID {customer_id}")
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if customer is None:
+        logging.error(f"Customer with ID {customer_id} not found")
         raise HTTPException(status_code=404, detail="Customer not found")
     
+    logging.info(f"Fetching subscription with ID {customer.subscription_id}")
     subscription = db.query(Subscription).filter(Subscription.id == customer.subscription_id).first()
-    promotion = db.query(Promotion).filter(Promotion.id == 1).first()  # Placeholder promotion
+    logging.info(f"Fetching promotion with ID {promotion_id}")
+    promotion = db.query(Promotion).filter(Promotion.id == promotion_id).first()
     
+    if subscription is None or promotion is None:
+        logging.error("Subscription or Promotion not found")
+        raise HTTPException(status_code=404, detail="Subscription or Promotion not found")
+
     customer_details = (
         f"Name: {customer.name}, Age: {customer.age}, City: {customer.city}, "
         f"Country: {customer.country}, Married: {customer.married}, Children: {customer.children}, "
@@ -48,6 +57,7 @@ def get_advertisement(customer_id: int, db: Session = Depends(get_db)):
     )
     promotion_details = f"Promotion: {promotion.details}, Validity: {promotion.validity_period}"
     
+    logging.info(f"Generating prompt with customer details: {customer_details} and promotion details: {promotion_details}")
     generated_prompt = generate_prompt(customer_details, promotion_details)
     
     # Ensure the image directory exists
@@ -57,6 +67,7 @@ def get_advertisement(customer_id: int, db: Session = Depends(get_db)):
     image_path = f"images/customer_{customer_id}_ad.png"
     
     try:
+        logging.info(f"Generating image with prompt: {generated_prompt}")
         generate_image(generated_prompt, image_path)
     except Exception as e:
         logging.error(f"Image generation failed: {e}")

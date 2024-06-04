@@ -6,7 +6,7 @@ generator = pipeline("text-generation", model="gpt2")  # Replace "gpt2" with the
 def generate_prompt(customer_details: str, promotion_details: str) -> str:
     prompt = (
         f"Generate a hyperrealistic photograph description for a promotional image based on the following details:\n"
-        f"Customer Details: {customer_details}\n"
+        f"Customer Details: {customer_details["persona"]}\n"
         f"Promotion Details: {promotion_details}\n"
         f"Description: "
     )

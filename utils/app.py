@@ -1,3 +1,4 @@
+# utils/app.py
 import streamlit as st
 import requests
 
@@ -23,7 +24,7 @@ def get_promotions():
 
 def generate_advertisement(customer_id, promotion_id):
     try:
-        response = requests.get(f"{API_URL}/advertisement/{customer_id}")
+        response = requests.get(f"{API_URL}/advertisement/{customer_id}?promotion_id={promotion_id}")
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
