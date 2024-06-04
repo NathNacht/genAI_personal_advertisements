@@ -1,8 +1,9 @@
 # main.py
 import logging
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-from utils import SessionLocal, engine, Customer, Subscription, Promotion, Advertisement, Outcome, generate_prompt, generate_image, Base
+from pydantic import BaseModel
+from utils import SessionLocal, engine, Customer, Persona, Subscription, Promotion, Advertisement, Outcome, generate_image, Base
 from dotenv import load_dotenv
 import os
 
@@ -19,6 +20,13 @@ def get_db():
     finally:
         db.close()
 
+class AdvertisementRequest(BaseModel):
+    promotion_id: int
+    positive_prompt: str
+    negative_prompt: str
+    promotion_details: str  # New field for promotion details
+    media: str  # New field for media
+
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
@@ -33,8 +41,28 @@ def get_promotions(db: Session = Depends(get_db)):
     promotions = db.query(Promotion).all()
     return promotions
 
-@app.get("/advertisement/{customer_id}")
-def get_advertisement(customer_id: int, promotion_id: int, db: Session = Depends(get_db)):
+@app.get("/customer/{customer_id}")
+def get_customer_details(customer_id: int, db: Session = Depends(get_db)):
+    customer = db.query(Customer).filter(Customer.id == customer_id).first()
+    if customer is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    persona = db.query(Persona).filter(Persona.id == customer.persona_id).first()
+    customer_details = {
+        "name": customer.name,
+        "age": customer.age,
+        "city": customer.city,
+        "country": customer.country,
+        "married": customer.married,
+        "children": customer.children,
+        "pets": customer.pets,
+        "subscription_id": customer.subscription_id,
+        "persona": persona.persona if persona else "None"
+    }
+    return customer_details
+
+@app.post("/advertisement/{customer_id}")
+def get_advertisement(customer_id: int, request: AdvertisementRequest, db: Session = Depends(get_db)):
     logging.info(f"Fetching customer with ID {customer_id}")
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if customer is None:
@@ -43,22 +71,17 @@ def get_advertisement(customer_id: int, promotion_id: int, db: Session = Depends
     
     logging.info(f"Fetching subscription with ID {customer.subscription_id}")
     subscription = db.query(Subscription).filter(Subscription.id == customer.subscription_id).first()
-    logging.info(f"Fetching promotion with ID {promotion_id}")
-    promotion = db.query(Promotion).filter(Promotion.id == promotion_id).first()
+    logging.info(f"Fetching promotion with ID {request.promotion_id}")
+    promotion = db.query(Promotion).filter(Promotion.id == request.promotion_id).first()
     
     if subscription is None or promotion is None:
         logging.error("Subscription or Promotion not found")
         raise HTTPException(status_code=404, detail="Subscription or Promotion not found")
 
-    customer_details = (
-        f"Name: {customer.name}, Age: {customer.age}, City: {customer.city}, "
-        f"Country: {customer.country}, Married: {customer.married}, Children: {customer.children}, "
-        f"Pets: {customer.pets}, Subscription: {subscription.plan_name}"
-    )
-    promotion_details = f"Promotion: {promotion.details}, Validity: {promotion.validity_period}"
-    
-    logging.info(f"Generating prompt with customer details: {customer_details} and promotion details: {promotion_details}")
-    generated_prompt = generate_prompt(customer_details, promotion_details)
+    positive_prompt = request.positive_prompt
+    negative_prompt = request.negative_prompt
+    promotion_details = request.promotion_details
+    media = request.media
     
     # Ensure the image directory exists
     os.makedirs("images", exist_ok=True)
@@ -67,8 +90,8 @@ def get_advertisement(customer_id: int, promotion_id: int, db: Session = Depends
     image_path = f"images/customer_{customer_id}_ad.png"
     
     try:
-        logging.info(f"Generating image with prompt: {generated_prompt}")
-        generate_image(generated_prompt, image_path)
+        logging.info(f"Generating image with positive prompt: {positive_prompt} and negative prompt: {negative_prompt}")
+        generate_image(positive_prompt, negative_prompt, image_path)
     except Exception as e:
         logging.error(f"Image generation failed: {e}")
         raise HTTPException(status_code=500, detail=f"Image generation failed: {e}")
@@ -77,9 +100,12 @@ def get_advertisement(customer_id: int, promotion_id: int, db: Session = Depends
         customer_id=customer_id,
         promotion_id=promotion.id,
         subscription_id=customer.subscription_id,
-        generated_prompt=generated_prompt,
+        generated_prompt=positive_prompt,
         generated_image_path=image_path,
-        generated_text=""  # This will be updated later
+        generated_text="",  # This will be updated later
+        negative_prompt=negative_prompt,  # Store the negative prompt
+        promotion_details=promotion_details,  # Store promotion details
+        media=media  # Store media
     )
     
     db.add(ad)
