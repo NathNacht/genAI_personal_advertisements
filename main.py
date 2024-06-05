@@ -24,8 +24,7 @@ class AdvertisementRequest(BaseModel):
     promotion_id: int
     positive_prompt: str
     negative_prompt: str
-    promotion_details: str  # New field for promotion details
-    media: str  # New field for media
+    parameters: dict  # Changed to dict to match the actual usage
 
 @app.get("/")
 def read_root():
@@ -80,8 +79,7 @@ def get_advertisement(customer_id: int, request: AdvertisementRequest, db: Sessi
 
     positive_prompt = request.positive_prompt
     negative_prompt = request.negative_prompt
-    promotion_details = request.promotion_details
-    media = request.media
+    parameters = request.parameters
     
     # Ensure the image directory exists
     os.makedirs("images", exist_ok=True)
@@ -100,12 +98,11 @@ def get_advertisement(customer_id: int, request: AdvertisementRequest, db: Sessi
         customer_id=customer_id,
         promotion_id=promotion.id,
         subscription_id=customer.subscription_id,
-        generated_prompt=positive_prompt,
+        positive_prompt=positive_prompt,
+        negative_prompt=negative_prompt,
+        prompt_parameters=str(parameters),  # Store the parameters as string
         generated_image_path=image_path,
-        generated_text="",  # This will be updated later
-        negative_prompt=negative_prompt,  # Store the negative prompt
-        promotion_details=promotion_details,  # Store promotion details
-        media=media  # Store media
+        outcome=None
     )
     
     db.add(ad)

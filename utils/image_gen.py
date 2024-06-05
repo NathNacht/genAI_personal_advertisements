@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-API_URL = "https://api-inference.huggingface.co/models/Corcelio/mobius"
+API_URL = "https://api-inference.huggingface.co/models/stablediffusionapi/epicrealism-xl-v7"
 api_token = os.getenv("HUGGINGFACE_API_TOKEN")
 if not api_token:
     raise ValueError("No API token provided. Please set the HUGGINGFACE_API_TOKEN environment variable.")
@@ -23,8 +23,8 @@ def generate_image(positive_prompt: str, negative_prompt: str, output_path: str,
         "inputs": positive_prompt,
         "parameters": {
             "negative_prompt": negative_prompt,
-            "width": 512,
-            "height": 512,
+            "width": 1080,
+            "height": 720,
             "steps": 100,
             "sampler": "DPM++ 3M SDE",
             "cfg_scale": 3.5,
@@ -48,7 +48,7 @@ def generate_image(positive_prompt: str, negative_prompt: str, output_path: str,
             final_image_path = apply_adetailer(output_path, output_path)
             return final_image_path
         
-        elif response.status_code == 503 and "Model is currently loading" in response.text:
+        elif response.status_code == 503 and "Model is currently loading" in response.json().get("error", ""):
             wait_time = wait * (2 ** attempt)
             print(f"Model is loading, retrying in {wait_time} seconds...")
             time.sleep(wait_time)

@@ -1,4 +1,3 @@
-# utils/app.py
 import streamlit as st
 import requests
 
@@ -31,7 +30,7 @@ def get_customer_details(customer_id):
         st.error(f"Failed to fetch customer details: {e}")
         return None
 
-def generate_advertisement(customer_id, promotion_id, positive_prompt, negative_prompt, promotion_details, media):
+def generate_advertisement(customer_id, promotion_id, positive_prompt, negative_prompt, parameters):
     try:
         response = requests.post(
             f"{API_URL}/advertisement/{customer_id}",
@@ -39,8 +38,7 @@ def generate_advertisement(customer_id, promotion_id, positive_prompt, negative_
                 "promotion_id": promotion_id,
                 "positive_prompt": positive_prompt,
                 "negative_prompt": negative_prompt,
-                "promotion_details": promotion_details,
-                "media": media
+                "parameters": parameters,  # Changed to 'parameters' to match the FastAPI endpoint
             }
         )
         response.raise_for_status()
@@ -63,7 +61,6 @@ if customers and promotions:
     selected_promotion = st.selectbox("Select Promotion", promotion_details)
     user_positive_prompt = st.text_area("Enter Positive Prompt")
     negative_prompt = st.text_area("Enter Negative Prompt")
-    selected_media = st.selectbox("Select Media", ["Email", "Website", "SMS", "Billboard", "Magazine", "Social Media"])
 
     if st.button("Generate Advertisement"):
         customer_id = selected_customer.split(":")[0]
@@ -75,17 +72,34 @@ if customers and promotions:
             # Construct the positive prompt
             persona = customer_details.get("persona")
             country = customer_details.get("country")
-            positive_prompt = f"{persona}, {country}, {selected_media}. {user_positive_prompt}"
-            promotion_details = selected_promotion.split(": ")[1]
+            positive_prompt = f"{persona}, {country}, {user_positive_prompt}"
+            parameters = {
+                "negative_prompt": negative_prompt,
+                "width": 1080,
+                "height": 720,
+                "steps": 100,
+                "sampler": "DPM++ 3M SDE",
+                "cfg_scale": 3.5,
+                "clip_skip": 3,
+                "hires_fix": {
+                    "enabled": True,
+                    "sampler": "DPM++ 3M SDE",
+                    "steps": 50,
+                    "strength": 0.2,
+                    "upscale": 1.5,
+                    "upscaler": "4x-UltraSharp"
+                }
+            }
 
             # Generate advertisement
-            ad_info = generate_advertisement(customer_id, promotion_id, positive_prompt, negative_prompt, promotion_details, selected_media)
+            ad_info = generate_advertisement(customer_id, promotion_id, positive_prompt, negative_prompt, parameters)
         
             if ad_info:
                 st.image(ad_info['generated_image_path'], caption='Generated Advertisement')
-                st.write(f"Positive Prompt: {ad_info['generated_prompt']}")
+                st.write(f"Positive Prompt: {ad_info['positive_prompt']}")
                 st.write(f"Negative Prompt: {ad_info['negative_prompt']}")
-                st.write(f"Promotion Details: {ad_info['promotion_details']}")
-                st.write(f"Media: {ad_info['media']}")
+                st.write(f"Prompt Parameters: {ad_info['prompt_parameters']}")
             else:
                 st.error("Failed to generate advertisement")
+else:
+    st.warning("No customers or promotions available.")
